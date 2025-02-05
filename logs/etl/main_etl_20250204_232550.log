@@ -1,0 +1,8 @@
+2025-02-04 23:25:50,714 - ERROR - Database connection error: connection to server at "localhost" (::1), port 5435 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5435 failed: fe_sendauth: no password supplied
+
+2025-02-04 23:25:50,714 - ERROR - ETL process failed: connection to server at "localhost" (::1), port 5435 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5435 failed: fe_sendauth: no password supplied
+

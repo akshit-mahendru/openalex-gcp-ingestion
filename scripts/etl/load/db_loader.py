@@ -75,7 +75,7 @@ if __name__ == "__main__":
     
     db_config = {
         "host": "localhost",
-        "port": 5432,
+        "port": 5435,
         "database": "postgres",
         "user": "postgres",
         "password": os.environ.get("DB_PASSWORD")

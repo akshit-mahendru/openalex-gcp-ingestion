@@ -4,27 +4,30 @@ import sys
 import logging
 from datetime import datetime
 from configs.database.db_config import DB_CONFIG
-from download.streaming_downloader import StreamingDownloader
-from transform.streaming_processor import StreamingProcessor
+from scripts.etl.download.streaming_downloader import StreamingDownloader
+from scripts.etl.transform.streaming_processor import StreamingProcessor
 
-def run_streaming_etl(base_dir):
-    """Run the streaming ETL process."""
-    # Setup logging
+def setup_logging(base_dir):
     log_dir = os.path.join(base_dir, 'logs', 'etl')
     os.makedirs(log_dir, exist_ok=True)
     
+    log_file = os.path.join(log_dir, f'etl_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
     logging.basicConfig(
-        filename=os.path.join(log_dir, f'main_etl_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
     )
 
-    # Initialize components
+def run_streaming_etl(base_dir):
+    setup_logging(base_dir)
+    
     try:
         downloader = StreamingDownloader(base_dir)
         processor = StreamingProcessor(base_dir, DB_CONFIG)
         
-        # Process each entity type
         entity_types = ['concepts', 'authors', 'institutions', 'venues', 'works']
         
         for entity_type in entity_types:
@@ -39,7 +42,7 @@ def run_streaming_etl(base_dir):
                 logging.error(f"Failed to process {entity_type}")
                 return False
             
-            logging.info(f"Completed processing of {entity_type}")
+            logging.info(f"Completed processing {entity_type}")
         
         logging.info("ETL process completed successfully")
         return True
@@ -53,11 +56,6 @@ def run_streaming_etl(base_dir):
             processor.close()
 
 if __name__ == "__main__":
-    # Get base directory
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    
-    # Run ETL
-    if run_streaming_etl(base_dir):
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    success = run_streaming_etl(base_dir)
+    sys.exit(0 if success else 1)

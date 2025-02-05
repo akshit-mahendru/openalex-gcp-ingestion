@@ -3,7 +3,7 @@ cat > scripts/validate_schema.sh << 'EOF'
 #!/bin/bash
 
 echo "Validating schema structure..."
-psql -h localhost -p 5432 -U postgres -d postgres << 'ENDSQL'
+psql -h localhost -p 5435 -U postgres -d postgres << 'ENDSQL'
 \dt openalex.*
 \d+ openalex.works
 \d+ openalex.authors
