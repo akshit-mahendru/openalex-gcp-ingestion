@@ -53,8 +53,6 @@ class EntityProcessors:
         
         return normalized
 
-    # Keep all existing methods, but replace process_works with this updated version:
-
     @classmethod
     def process_works(cls, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -68,47 +66,29 @@ class EntityProcessors:
             work_data = {
                 'id': data.get('id'),
                 'doi': data.get('doi'),
-                'doi_registration_agency': data.get('doi_registration_agency'),
                 'title': data.get('title'),
-                'display_name': data.get('display_name'),
+                'display_name': data.get('display_name') or data.get('title'),
                 'publication_year': data.get('publication_year'),
                 'publication_date': data.get('publication_date'),
                 'type': data.get('type'),
-                'type_crossref': data.get('type_crossref'),
-                'type_id': data.get('type_id'),
-                'language': data.get('language'),
-                'language_id': data.get('language_id'),
                 'cited_by_count': data.get('cited_by_count', 0),
                 'cited_by_api_url': data.get('cited_by_api_url'),
+                'is_retracted': data.get('is_retracted', False),
+                'is_paratext': data.get('is_paratext', False),
                 'abstract_inverted_index': json.dumps(data.get('abstract_inverted_index', {})) if data.get('abstract_inverted_index') else None,
-                'indexed_in': json.dumps(data.get('indexed_in', [])),
-                'has_fulltext': data.get('has_fulltext', False),
+                'alternate_titles': json.dumps(data.get('alternate_titles', [])) if data.get('alternate_titles') else None,
+                'has_fulltext': bool(data.get('has_fulltext', False)),
+                'created_date': data.get('created_date'),
+                'updated_date': data.get('updated_date') or data.get('updated', datetime.now().isoformat()),
                 'authors_count': data.get('authors_count'),
                 'concepts_count': data.get('concepts_count'),
-                'topics_count': data.get('topics_count'),
-                'referenced_works': json.dumps(data.get('referenced_works', [])),
-                'related_works': json.dumps(data.get('related_works', [])),
-                'primary_location': json.dumps(data.get('primary_location')) if data.get('primary_location') else None,
-                'best_oa_location': json.dumps(data.get('best_oa_location')) if data.get('best_oa_location') else None,
-                'locations_count': data.get('locations_count'),
-                'primary_topic': json.dumps(data.get('primary_topic')) if data.get('primary_topic') else None,
-                'sustainable_development_goals': json.dumps(data.get('sustainable_development_goals', [])),
-                'keywords': json.dumps(data.get('keywords', [])),
-                'fwci': data.get('fwci'),
-                'citation_normalized_percentile': json.dumps(data.get('citation_normalized_percentile')),
-                'grants': json.dumps(data.get('grants', [])),
-                'apc_list': data.get('apc_list'),
-                'apc_paid': data.get('apc_paid'),
-                'created_date': data.get('created_date'),
-                'updated_date': data.get('updated_date') or data.get('updated'),
-                'is_retracted': data.get('is_retracted', False),
-                'is_paratext': data.get('is_paratext', False)
+                'topics_count': data.get('topics_count')
             }
 
             # Process IDs
             works_ids = {
                 'work_id': data.get('id'),
-                'openalex': data.get('ids', {}).get('openalex'),
+                'openalex': data.get('id'),
                 'doi': data.get('doi'),
                 'mag': data.get('ids', {}).get('mag'),
                 'pmid': data.get('ids', {}).get('pmid'),
@@ -117,96 +97,76 @@ class EntityProcessors:
             }
 
             # Process Open Access
-            open_access = data.get('open_access', {})
             works_open_access = {
                 'work_id': data.get('id'),
-                'is_oa': open_access.get('is_oa', False),
-                'oa_status': cls._normalize_oa_status(open_access.get('oa_status')),
-                'oa_url': open_access.get('oa_url'),
-                'any_repository_has_fulltext': open_access.get('any_repository_has_fulltext', False)
+                'is_oa': data.get('open_access', {}).get('is_oa', False),
+                'oa_status': cls._normalize_oa_status(data.get('open_access', {}).get('oa_status')),
+                'oa_url': data.get('open_access', {}).get('oa_url'),
+                'is_official_oa': data.get('open_access', {}).get('is_official_oa', False)
             }
 
             # Process Authorships
             works_authorships = []
-            for authorship in data.get('authorships', []):
+            for idx, authorship in enumerate(data.get('authorships', [])):
                 author = authorship.get('author', {})
+                institution = authorship.get('institution', {})
                 authorship_entry = {
                     'work_id': data.get('id'),
                     'author_id': author.get('id'),
-                    'author_position': authorship.get('author_position'),
-                    'raw_author_name': authorship.get('raw_author_name'),
-                    'raw_affiliation_string': authorship.get('raw_affiliation_strings', [None])[0],
-                    'institution_id': None,  # Will be populated from institutions list if available
-                    'is_corresponding': authorship.get('is_corresponding', False),
-                    'countries': json.dumps(authorship.get('countries', [])),
-                    'country_ids': json.dumps(authorship.get('country_ids', []))
+                    'institution_id': institution.get('id'),
+                    'author_position': 'first' if idx == 0 else ('last' if idx == len(data.get('authorships', [])) - 1 else 'middle'),
+                    'raw_author_name': author.get('display_name'),
+                    'primary_author': idx == 0
                 }
-                
-                # Get first institution if available
-                institutions = authorship.get('institutions', [])
-                if institutions:
-                    authorship_entry['institution_id'] = institutions[0].get('id')
-                
                 works_authorships.append(authorship_entry)
 
-            # Process Topics
-            works_topics = []
-            for topic in data.get('topics', []):
-                topic_entry = {
+            # Process Related Works
+            works_related_works = [
+                {
                     'work_id': data.get('id'),
-                    'topic_id': topic.get('id'),
-                    'score': topic.get('score'),
-                    'display_name': topic.get('display_name'),
-                    'field_id': topic.get('field', {}).get('id'),
-                    'field_display_name': topic.get('field', {}).get('display_name'),
-                    'subfield_id': topic.get('subfield', {}).get('id'),
-                    'subfield_display_name': topic.get('subfield', {}).get('display_name'),
-                    'domain_id': topic.get('domain', {}).get('id'),
-                    'domain_display_name': topic.get('domain', {}).get('display_name')
+                    'related_work_id': related_work,
+                    'relation_type': 'related'
                 }
-                works_topics.append(topic_entry)
+                for related_work in data.get('related_works', [])
+            ]
+
+            # Process Referenced Works
+            works_referenced_works = [
+                {
+                    'work_id': data.get('id'),
+                    'referenced_work_id': referenced_work
+                }
+                for referenced_work in data.get('referenced_works', [])
+            ]
 
             # Process Concepts
             works_concepts = [
                 {
                     'work_id': data.get('id'),
                     'concept_id': concept.get('id'),
-                    'score': concept.get('score'),
-                    'display_name': concept.get('display_name'),
-                    'level': concept.get('level'),
-                    'wikidata': concept.get('wikidata')
+                    'score': concept.get('score')
                 }
                 for concept in data.get('concepts', [])
             ]
 
-            # Process Mesh
+            # Process Mesh Terms
             works_mesh = [
                 {
                     'work_id': data.get('id'),
                     'descriptor_ui': mesh.get('descriptor_ui'),
                     'descriptor_name': mesh.get('descriptor_name'),
                     'qualifier_ui': mesh.get('qualifier_ui'),
-                    'qualifier_name': mesh.get('qualifier_name'),
-                    'is_major_topic': mesh.get('is_major_topic', False)
+                    'qualifier_name': mesh.get('qualifier_name')
                 }
                 for mesh in data.get('mesh', [])
             ]
-
-            # Process Biblio
-            biblio = data.get('biblio', {})
-            works_biblio = {
-                'work_id': data.get('id'),
-                'volume': biblio.get('volume'),
-                'issue': biblio.get('issue'),
-                'first_page': biblio.get('first_page'),
-                'last_page': biblio.get('last_page')
-            }
 
             # Process Counts by Year
             works_counts_by_year = [
                 {
                     'work_id': data.get('id'),
                     'year': count.get('year'),
+                    'works_count': 1,  # Default to 1 for the specific work
                     'cited_by_count': count.get('cited_by_count', 0)
                 }
                 for count in data.get('counts_by_year', [])
@@ -217,10 +177,10 @@ class EntityProcessors:
                 'works_ids': works_ids,
                 'works_open_access': works_open_access,
                 'works_authorships': works_authorships,
-                'works_topics': works_topics,
+                'works_related_works': works_related_works,
+                'works_referenced_works': works_referenced_works,
                 'works_concepts': works_concepts,
                 'works_mesh': works_mesh,
-                'works_biblio': works_biblio,
                 'works_counts_by_year': works_counts_by_year
             }
         except Exception as e:

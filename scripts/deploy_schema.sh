@@ -4,7 +4,7 @@ cat > scripts/deploy_schema.sh << 'EOF'
 
 # Configuration
 PROJECT_ID="neudev01"
-INSTANCE_NAME="openalex-db"
+INSTANCE_NAME="openalex-db-eu"
 DATABASE_NAME="postgres"
 
 # Deploy schema using Cloud SQL Proxy
