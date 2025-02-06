@@ -472,8 +472,6 @@ CREATE INDEX idx_fields_display_name ON fields(display_name);
 CREATE INDEX idx_subfields_display_name ON subfields(display_name);
 CREATE INDEX idx_topics_display_name ON topics(display_name);
 
-[Previous content remains the same until the last line...]
-
 -- GIN indexes for JSONB and array fields
 CREATE INDEX idx_works_referenced_works_gin ON works USING gin(referenced_works);
 CREATE INDEX idx_works_related_works_gin ON works USING gin(related_works);
